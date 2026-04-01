@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Job Tracker — Mes candidatures</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="css/styles.css">
+        <link rel="manifest" href="manifest.json">
+    </head>
+
+    <body>
+        <!-- HEADER -->
+        <header>
+            <div class="logo">job<span>.</span>tracker</div>
+            <div class="header-actions">
+                <button class="btn btn-ghost" onclick="exportData()">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                Exporter
+                </button>
+                <button class="btn btn-primary" onclick="openAddModal()">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Nouvelle candidature
+                </button>
+            </div>
+        </header>
+
+        <!-- STATS -->
+        <div class="stats-bar" id="statsBar"></div>
+
+        <!-- MAIN -->
+        <main>
+        <div class="toolbar">
+            <div class="search-wrap">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="search-input" type="text" placeholder="Rechercher entreprise, poste…" id="searchInput" oninput="displayJobApplications()">
+            </div>
+            <select class="filter-select" id="filterStatus" onchange="displayJobApplications()">
+            <option value="">Tous les statuts</option>
+            <option value="postule">Postulé</option>
+            <option value="relance">Relancé</option>
+            <option value="entretien">Entretien</option>
+            <option value="test">Test technique</option>
+            <option value="offre">Offre reçue</option>
+            <option value="refus">Refus</option>
+            <option value="archive">Archivé</option>
+            </select>
+            <select class="filter-select" id="sortBy" onchange="displayJobApplications()">
+            <option value="date_desc">Plus récent</option>
+            <option value="date_asc">Plus ancien</option>
+            <option value="company">Entreprise A→Z</option>
+            <option value="status">Statut</option>
+            </select>
+        </div>
+        <div id="cardsList"></div>
+        </main>
+
+        <!-- MODAL ADD / EDIT -->
+        <div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+        <div class="modal" id="modal">
+            <div class="modal-header">
+            <div class="modal-title" id="modalTitle">Nouvelle candidature</div>
+            <button class="btn-icon" onclick="closeModal()">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            </div>
+            <div class="modal-body">
+            <div class="form-grid">
+                <!-- Entreprise & poste -->
+                <div class="form-group">
+                <label>Entreprise *</label>
+                <input type="text" id="f-company" placeholder="Ex: Société Générale">
+                </div>
+                <div class="form-group">
+                <label>Poste *</label>
+                <input type="text" id="f-job-title" placeholder="Ex: Dev Full Stack Junior">
+                </div>
+
+                <!-- Localisation & contrat -->
+                <div class="form-group">
+                <label>Localisation</label>
+                <input type="text" id="f-location" placeholder="Ex: Paris, Remote…">
+                </div>
+                <div class="form-group">
+                <label>Type de contrat</label>
+                <select id="f-contract">
+                    <option value="">—</option>
+                    <option value="CDI">CDI</option>
+                    <option value="CDD">CDD</option>
+                    <option value="Stage">Stage</option>
+                    <option value="Alternance">Alternance</option>
+                    <option value="Freelance">Freelance</option>
+                    <option value="Autre">Autre</option>
+                </select>
+                </div>
+
+                <!-- Salaire -->
+                <div class="form-group">
+                <label>Salaire / Rémunération</label>
+                <input type="text" id="f-salary" placeholder="Ex: 35 000€ / 1 200€ brut">
+                </div>
+
+                <!-- Statut -->
+                <div class="form-group">
+                <label>Statut</label>
+                <select id="f-status">
+                    <option value="postule">Postulé</option>
+                    <option value="relance">Relancé</option>
+                    <option value="entretien">Entretien</option>
+                    <option value="test">Test technique</option>
+                    <option value="offre">Offre reçue</option>
+                    <option value="refus">Refus</option>
+                    <option value="archive">Archivé</option>
+                </select>
+                </div>
+
+                <!-- Dates -->
+                <div class="form-group">
+                <label>Date de candidature</label>
+                <input type="date" id="f-date-apply">
+                </div>
+                <div class="form-group">
+                <label>Dernière mise à jour</label>
+                <input type="date" id="f-date-response">
+                </div>
+
+                <!-- Nombre d'entretiens -->
+                <div class="form-group">
+                <label>Nombre d'entretiens</label>
+                <input type="number" id="f-interviews" placeholder="Ex: 2">
+                </div>
+
+                <!-- Lien offre -->
+                <div class="form-group full">
+                <label>Lien vers l'offre</label>
+                <input type="url" id="f-url-offer" placeholder="https://…">
+                </div>
+
+                <!-- Lettre de motivation -->
+                <div class="form-group full">
+                <label>Lien lettre de motivation (Google Drive, etc.)</label>
+                <input type="url" id="f-url-cover" placeholder="https://docs.google.com/…">
+                </div>
+
+            </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
+                <button class="btn btn-delete" id="deleteBtn" onclick="openConfirm()">Supprimer</button>
+                <button class="btn btn-primary" onclick="saveEntry()">Enregistrer</button>
+            </div>
+        </div>
+        </div>
+
+        <!-- CONFIRM DELETE -->
+        <div class="confirm-overlay" id="confirmOverlay">
+        <div class="confirm-box">
+            <h3>Supprimer cette candidature ?</h3>
+            <p>Cette action est irréversible. La candidature sera définitivement supprimée.</p>
+            <div class="confirm-actions">
+            <button class="btn btn-ghost" onclick="closeConfirm()">Annuler</button>
+            <button class="btn btn-delete open" onclick="confirmDelete()">Supprimer</button>
+            </div>
+        </div>
+        </div>
+
+        <!-- TOAST -->
+        <div class="toast" id="toast"></div>
+
+        <script src="js/app.js" defer></script>
+    </body>
+</html>
