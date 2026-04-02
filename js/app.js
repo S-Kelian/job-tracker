@@ -79,6 +79,35 @@ const STATUS = {
 async function displayJobApplications(){
     const applications = await readApplications();
     console.log(applications);
+
+    // Read the filter values
+    // search for company, job title, location
+    let searchFilter = document.getElementById('searchInput').value.toLowerCase();
+
+    let statusFilter = document.getElementById('filterStatus').value;
+
+    let orderFilter = document.getElementById('sortBy').value;
+
+    // Apply filters
+    let filteredApps = applications.filter(app => {
+        const matchesSearch = app.company.toLowerCase().includes(searchFilter) ||
+                              app.jobTitle.toLowerCase().includes(searchFilter) ||
+                              app.location.toLowerCase().includes(searchFilter);
+        const matchesStatus = statusFilter === '' || app.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    });
+
+    // Apply sorting
+    if(orderFilter === 'date_desc'){
+        filteredApps.sort((a, b) => new Date(b.lastUpdate) - new Date(a.lastUpdate));
+    } else if(orderFilter === 'date_asc'){
+        filteredApps.sort((a, b) => new Date(a.lastUpdate) - new Date(b.lastUpdate));
+    } else if(orderFilter === 'company'){
+        filteredApps.sort((a, b) => a.company.localeCompare(b.company));
+    } else if(orderFilter === 'status'){
+        filteredApps.sort((a, b) => a.status.localeCompare(b.status));
+    }
+
     const tableHead = `
     <table>
     <tr>
@@ -94,7 +123,7 @@ async function displayJobApplications(){
     </tr>
     `;
 
-    const tableBody = applications.map(app => `
+    const tableBody = filteredApps.map(app => `
         <tr onclick="openEditModal('${app.id}')">
             <td>${app.company}</td>
             <td>${app.jobTitle}</td>
