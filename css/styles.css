@@ -53,6 +53,15 @@
   .logo span { color: var(--accent); }
   .header-actions { display: flex; gap: 10px; align-items: center; }
 
+  /* ── LINK ── */
+  a {
+    color: var(--text);
+    text-decoration: underline;
+  }
+  a:hover {
+    color: var(--text-muted);
+  }
+
   /* ── STATS BAR ── */
   .stats-bar {
     background: var(--surface);

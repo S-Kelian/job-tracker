@@ -126,7 +126,9 @@ async function displayJobApplications(){
     const tableBody = filteredApps.map(app => `
         <tr onclick="openEditModal('${app.id}')">
             <td>${app.company}</td>
-            <td>${app.jobTitle}</td>
+            <td>
+                ${app.urlOffer ? `<a href="${app.urlOffer}" target="_blank" onclick="event.stopPropagation();">${app.jobTitle}</a>` : app.jobTitle}
+            </td>
             <td>${app.location}</td>
             <td>${app.contract}</td>
             <td>${app.salary}</td>
