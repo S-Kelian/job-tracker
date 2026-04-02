@@ -105,7 +105,6 @@ function updateStats(applications){
 
 async function displayJobApplications(){
     const applications = await readApplications();
-    console.log(applications);
 
     // Read the filter values
     // search for company, job title, location
@@ -175,19 +174,16 @@ async function displayJobApplications(){
 let editingId = null;
 
 function openAddModal(){
-    console.log('open add modal');
     editingId = null;
     let modal = document.getElementById('modalOverlay');
     modal.classList.add('open'); 
 }
 
 async function openEditModal(id){
-    console.log('open edit modal', id);
     editingId = id;
     let application = await readApplications();
     const app = application.find(a => a.id === id);
     if(app){
-        console.log('app to edit', app);
         document.getElementById('f-company').value = app.company;
         document.getElementById('f-job-title').value = app.jobTitle;
         document.getElementById('f-location').value = app.location;
@@ -298,6 +294,14 @@ function exportCSV(){
 
 
 async function init(){
+    if ('serviceWorker' in navigator) {
+        try {
+            await navigator.serviceWorker.register('./service-worker.js');
+            console.log('Service Worker registered successfully');
+        } catch (error) {
+            console.error('Service Worker registration failed:', error);
+        }
+    }
     db = await openDB();
     await displayJobApplications();
 }
