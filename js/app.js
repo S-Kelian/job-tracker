@@ -76,6 +76,33 @@ const STATUS = {
   archive:   { label: 'Archivé',        cls: 's-archive',   color: '#7a746a', bar: '#c8c2ba' },
 };
 
+function updateStats(applications){
+    const statsContainer = document.getElementById('statsBar');
+    const number = applications.length;
+    const decline = applications.filter(app => app.status === 'refus').length;
+    const rate = number > 0 ? Math.round((decline / number) * 100) : 0;
+    const interviewNumber = applications.reduce((sum, app) => sum + app.interviewNumber, 0);
+
+    statsContainer.innerHTML = `
+        <div class="stat">
+            <span class="stat-value">${number}</span>
+            <span class="stat-label">Candidatures</span>
+        </div>
+        <div class="stat"> 
+            <span class="stat-value">${decline}</span>
+            <span class="stat-label">Candidatures refusées</span>
+        </div>
+        <div class="stat"> 
+            <span class="stat-value">${rate}%</span>
+            <span class="stat-label">Taux de refus</span>
+        </div>
+        <div class="stat">
+            <span class="stat-value">${interviewNumber}</span>
+            <span class="stat-label">Entretiens</span>
+        </div>
+    `; 
+}
+
 async function displayJobApplications(){
     const applications = await readApplications();
     console.log(applications);
@@ -142,6 +169,7 @@ async function displayJobApplications(){
     const tableFooter = `</table>`;
 
     document.getElementById('cardsList').innerHTML = tableHead + tableBody + tableFooter;
+    updateStats(filteredApps);
 }
 
 let editingId = null;

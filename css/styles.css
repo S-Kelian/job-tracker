@@ -68,6 +68,7 @@
     border-bottom: 1px solid var(--border);
     padding: 12px 32px;
     display: flex;
+    justify-content: center;
     gap: 32px;
     overflow-x: auto;
   }
@@ -114,7 +115,7 @@
   }
   .search-input {
     width: 100%;
-    padding: 9px 12px 9px 36px;
+    padding: 9px 12px 9px 36px !important;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     background: var(--surface);
