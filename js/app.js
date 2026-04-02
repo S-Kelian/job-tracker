@@ -267,6 +267,34 @@ async function saveEntry(){
     document.getElementById('modalOverlay').classList.remove('open');
 }
 
+function exportCSV(){
+    var rows = document.querySelectorAll("table tr");
+    // Construct csv
+    var csv = [];
+    var headers = "Entreprise,Poste,Localisation,Statut,Nombre d'entretiens,Date de candidature";
+    var columnsToKeep = [0, 1, 2, 5, 6, 7];
+    csv.push(headers);
+    for (var i = 1; i < rows.length; i++) {
+        var row = [];
+        var cols = rows[i].querySelectorAll('td, th');
+        for (var j = 0; j < columnsToKeep.length; j++) {
+            row.push(cols[columnsToKeep[j]].innerText);
+        }
+        csv.push(row.join(','));
+    }
+    var csv_string = csv.join('\n');
+    // Download it
+    var filename = 'job_applications_' + new Date().toLocaleDateString() + '.csv';
+    var link = document.createElement('a');
+    link.style.display = 'none';
+    link.setAttribute('target', '_blank');
+    link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv_string));
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 
 
 async function init(){
