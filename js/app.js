@@ -117,6 +117,17 @@ function updateStats(applications){
 async function displayJobApplications(){
     const applications = await readApplications();
 
+    if (applications.length === 0){
+         document.getElementById('cardsList').innerHTML = `
+            <div class="empty-state">
+                <p>Aucune candidature enregistrée.</p>
+                <button onclick="openAddModal()" class="btn btn-primary">Ajouter ma première candidature</button>
+            </div>
+        `;
+        updateStats([]);
+        return;
+    }
+
     // Read the filter values
     // search for company, job title, location
     let searchFilter = document.getElementById('searchInput').value.toLowerCase();
@@ -133,6 +144,12 @@ async function displayJobApplications(){
         const matchesStatus = statusFilter === '' || app.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
+
+    if (filteredApps.length === 0){
+        document.getElementById('cardsList').innerHTML = '<p style="text-align: center; color: var(--text);">Aucune candidature trouvée</p>';
+        updateStats([]);
+        return;
+    }
 
     // Apply sorting
     if(orderFilter === 'date_desc'){
@@ -367,8 +384,11 @@ function formatDate(dateStr){
 
 
 
+
+
 async function init(){
     console.log('app.js loaded');
+    /*
     if ('serviceWorker' in navigator) {
         try {
             await navigator.serviceWorker.register('./service-worker.js');
@@ -377,9 +397,20 @@ async function init(){
             console.error('Service Worker registration failed:', error);
         }
     }
+    */
     db = await openDB();
     await displayJobApplications();
 }
 
 init();
+
+document.onkeydown = function(evt) {
+    if (evt.key === "Escape") {
+        if (document.getElementById('confirmOverlay').classList.contains('open')) {
+            closeConfirm();
+        } else if (document.getElementById('modalOverlay').classList.contains('open')) {
+            closeModal();
+        }
+    }
+};
 
