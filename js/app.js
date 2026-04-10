@@ -1,3 +1,5 @@
+
+
 // ── DATA ──────────────────────────────────────────────────────────────
 const application = {
     id: '',
@@ -11,7 +13,15 @@ const application = {
     lastUpdate: '',
     urlOffer: '',
     interviewNumber: 0,
-    urlCover: ''
+    urlCover: '', 
+    mails: [
+        {
+            date: '',
+            title: '',
+            received: false, // true if received, false if sent
+            url: ''
+        }
+    ]
 }
 
 async function openDB(){
@@ -31,6 +41,7 @@ async function openDB(){
 }
 
 let db = null;
+let mailsContainer = [];
 
 async function saveApplication(application) {
     if (!db) db = await openDB();
@@ -160,8 +171,8 @@ async function displayJobApplications(){
             <td>${app.salary}</td>
             <td><span class="badge ${STATUS[app.status]?.cls || 's-postule'}">${STATUS[app.status]?.label || 'Postulé'}</span></td>
             <td>${app.interviewNumber}</td>
-            <td>${app.dateApply}</td>
-            <td>${app.lastUpdate}</td>
+            <td>${formatDate(app.dateApply)}</td>
+            <td>${formatDate(app.lastUpdate)}</td>
         </tr>
     `).join('');
 
@@ -191,11 +202,15 @@ async function openEditModal(id){
         document.getElementById('f-salary').value = app.salary;
         document.getElementById('f-status').value = app.status;
         document.getElementById('f-date-apply').value = app.dateApply;
+        document.getElementById('f-date-update').value = app.lastUpdate;
         document.getElementById('f-url-offer').value = app.urlOffer;
         document.getElementById('f-interviews').value = app.interviewNumber;
         document.getElementById('f-url-cover').value = app.urlCover;
         document.getElementById('modalOverlay').classList.add('open');
         document.getElementById('deleteBtn').classList.add('open');
+
+        mailsContainer = app.mails || [];
+        renderMails();
     }
 }
 
@@ -209,6 +224,9 @@ function handleOverlayClick(event){
 function closeModal(){
     document.getElementById('modalOverlay').classList.remove('open');
     document.getElementById('deleteBtn').classList.remove('open');
+
+    // clear mails 
+    mailsContainer = [];
 }
 
 function openConfirm(){
@@ -248,19 +266,69 @@ async function saveEntry(){
         salary: document.getElementById('f-salary').value,
         status: document.getElementById('f-status').value,
         dateApply: document.getElementById('f-date-apply').value,
+        lastUpdate: document.getElementById('f-date-update').value,
         urlOffer: document.getElementById('f-url-offer').value,
+        mails: mailsContainer,
         interviewNumber: parseInt(document.getElementById('f-interviews').value) || 0,
         urlCover: document.getElementById('f-url-cover').value
     };
-
-    newApp.lastUpdate = new Date().toISOString().split('T')[0];
 
     // Save to IndexedDB
     await saveApplication(newApp);
     // Re-render cards
     await displayJobApplications();
+
+    // Clear form
+    document.getElementById('f-company').value = '';
+    document.getElementById('f-job-title').value = '';
+    document.getElementById('f-location').value = '';
+    document.getElementById('f-contract').value = '';
+    document.getElementById('f-salary').value = '';
+    document.getElementById('f-status').value = '';
+    document.getElementById('f-date-apply').value = '';
+    document.getElementById('f-date-update').value = '';
+    document.getElementById('f-url-offer').value = '';
+    document.getElementById('f-interviews').value = '';
+    document.getElementById('f-url-cover').value = '';
+
     // Close modal
-    document.getElementById('modalOverlay').classList.remove('open');
+    closeModal();
+}
+
+
+function addMail(){
+    const mail = {
+        date: document.getElementById('f-mail-date').value,
+        title: document.getElementById('f-mail-title').value,
+        received: document.getElementById('f-mail-received').checked,
+        url: document.getElementById('f-mail-url').value
+    };
+    mailsContainer.push(mail);
+    // Clear form
+    document.getElementById('f-mail-date').value = '';
+    document.getElementById('f-mail-title').value = '';
+    document.getElementById('f-mail-received').checked = false;
+    document.getElementById('f-mail-url').value = '';
+
+    // Disable mail form
+    document.getElementById('mailForm').style.display = 'none';
+    renderMails();
+} 
+
+function renderMails(){
+    const mailsList = document.getElementById('mailsList');
+    orderMails = mailsContainer.sort((a, b) => new Date(a.date) - new Date(b.date));
+    mailsList.innerHTML = orderMails.map((mail, index) => `
+        <div class="mail-entry ${mail.received ? 'received' : 'sent'}">
+            <span>${formatDate(mail.date)} : <a href="${mail.url}" target="_blank">${mail.title}</a> </span>
+            <button onclick="mailsContainer.splice(${index}, 1); renderMails();" style="background: none; border: none; color: red; cursor: pointer;">X</button>
+        </div>
+    `).join('');
+}
+
+function openMailForm(){
+    console.log('Opening mail form');
+    document.getElementById('mailForm').style.display = 'block';
 }
 
 function exportCSV(){
@@ -291,9 +359,16 @@ function exportCSV(){
     document.body.removeChild(link);
 }
 
+function formatDate(dateStr){
+    // Format date as "DD MMM YYYY"
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    return new Date(dateStr).toLocaleDateString('fr-FR', options);
+}
+
 
 
 async function init(){
+    console.log('app.js loaded');
     if ('serviceWorker' in navigator) {
         try {
             await navigator.serviceWorker.register('./service-worker.js');

@@ -123,7 +123,7 @@
                 </div>
                 <div class="form-group">
                 <label>Dernière mise à jour</label>
-                <input type="date" id="f-date-response">
+                <input type="date" id="f-date-update">
                 </div>
 
                 <!-- Nombre d'entretiens -->
@@ -144,6 +144,24 @@
                 <input type="url" id="f-url-cover" placeholder="https://docs.google.com/…">
                 </div>
 
+                <!-- Mails échangés -->
+                <div class="form-group full">
+                    <label>Mails échangés</label>
+                    <div id="mailsList"> </div>
+                </div>
+                <!-- Bouton ajouter mail -->
+                <div class="form-group full" id="mailForm" style="display:none">
+                    <label> Date du mail </label>
+                    <input type="date" id="f-mail-date">
+                    <label> Titre du mail </label>
+                    <input type="text" id="f-mail-title" placeholder="Ex: Relance avant entretien">
+                    <label><input type="checkbox" id="f-mail-received"> Mail reçu (sinon mail envoyé)</label>
+                    <label> Lien vers le mail (optionnel) </label>
+                    <input type="url" id="f-mail-url" placeholder="https://mail.google.com/…">
+                    <button class="btn btn-ghost" onclick="addMail()">Ajouter ce mail</button>
+                </div>
+                <button class="btn btn-ghost" id="addMailBtn" onclick="openMailForm()">+ Ajouter un mail</button>
+            
             </div>
             </div>
             <div class="modal-footer">
