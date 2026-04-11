@@ -136,13 +136,19 @@ async function displayJobApplications(){
 
     let orderFilter = document.getElementById('sortBy').value;
 
+    let dateMin = document.getElementById('f-date-min').value;
+    let dateMax = document.getElementById('f-date-max').value;
+
     // Apply filters
     let filteredApps = applications.filter(app => {
         const matchesSearch = app.company.toLowerCase().includes(searchFilter) ||
                               app.jobTitle.toLowerCase().includes(searchFilter) ||
-                              app.location.toLowerCase().includes(searchFilter);
+                              app.location.toLowerCase().includes(searchFilter) 
+
         const matchesStatus = statusFilter === '' || app.status === statusFilter;
-        return matchesSearch && matchesStatus;
+        const matchesDate = (dateMin === '' || new Date(app.lastUpdate) >= new Date(dateMin)) &&
+                            (dateMax === '' || new Date(app.lastUpdate) <= new Date(dateMax));
+        return matchesSearch && matchesStatus && matchesDate;
     });
 
     if (filteredApps.length === 0){
@@ -388,7 +394,6 @@ function formatDate(dateStr){
 
 async function init(){
     console.log('app.js loaded');
-    /*
     if ('serviceWorker' in navigator) {
         try {
             await navigator.serviceWorker.register('./service-worker.js');
@@ -397,7 +402,6 @@ async function init(){
             console.error('Service Worker registration failed:', error);
         }
     }
-    */
     db = await openDB();
     await displayJobApplications();
 }
