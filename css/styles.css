@@ -18,8 +18,6 @@
     --gold: #b7950b;
     --gold-light: #fef9e3;
     --radius: 10px;
-    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
-    --shadow-hover: 0 4px 12px rgba(0,0,0,0.10), 0 8px 32px rgba(0,0,0,0.06);
   }
 
   body {
@@ -188,7 +186,7 @@
   }
   .btn-danger:hover { background: var(--danger-light); }
   .btn-icon {
-    background: var(--transparent);
+    background: transparent;
     color: var(--text-muted);
     border: none;
     padding: 6px;
@@ -217,16 +215,6 @@
     padding: 80px 32px;
     color: var(--text-muted);
   }
-  .empty-icon {
-    font-size: 48px;
-    margin-bottom: 16px;
-  }
-  .empty-state h3 {
-    font-family: 'Libre Baskerville', serif;
-    font-size: 20px;
-    color: var(--text);
-    margin-bottom: 8px;
-  }
 
   /* ── Table ── */
   table {
@@ -245,7 +233,6 @@
   }
   tbody tr:hover { 
     background: var(--surface2); 
-    box-shadow: var(--shadow-hover);
   }
 
   /* ── STATUS BADGE ── */
@@ -259,19 +246,15 @@
     border-radius: 20px;
     white-space: nowrap;
   }
-  .badge-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-  }
 
   /* status colors */
-  .s-postule   { background: var(--info-light);    color: var(--info);    --dot: var(--info); }
-  .s-relance   { background: var(--warning-light); color: var(--warning); --dot: var(--warning); }
-  .s-entretien { background: var(--accent-light);  color: var(--accent);  --dot: var(--accent); }
-  .s-test      { background: #f0e6ff;              color: #7c3aed;        --dot: #7c3aed; }
-  .s-offre     { background: var(--gold-light);    color: var(--gold);    --dot: var(--gold); }
-  .s-refus     { background: var(--danger-light);  color: var(--danger);  --dot: var(--danger); }
-  .s-archive   { background: var(--surface2);      color: var(--text-muted); --dot: var(--text-muted); }
+  .s-postule   { background: var(--info-light);    color: var(--info); }
+  .s-relance   { background: var(--warning-light); color: var(--warning); }
+  .s-entretien { background: var(--accent-light);  color: var(--accent); }
+  .s-test      { background: #f0e6ff;            color: #7c3aed; }
+  .s-offre     { background: var(--gold-light);    color: var(--gold); }
+  .s-refus     { background: var(--danger-light);  color: var(--danger);  }
+  .s-archive   { background: var(--surface2);      color: var(--text-muted); }
 
   /* ── MODAL ── */
   .modal-overlay {
@@ -395,41 +378,6 @@
     margin-left: 55%;
   }
 
-
-
-  /* ── DETAIL PANEL ── */
-  .detail-section { margin-bottom: 20px; }
-  .detail-section h4 {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    color: var(--text-muted);
-    margin-bottom: 8px;
-  }
-  .detail-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 13px;
-  }
-  .detail-row:last-child { border-bottom: none; }
-  .detail-key { color: var(--text-muted); }
-  .detail-val { font-weight: 500; max-width: 60%; text-align: right; }
-  .detail-link {
-    color: var(--accent);
-    text-decoration: none;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 200px;
-    display: inline-block;
-  }
-  .detail-link:hover { text-decoration: underline; }
-
-
-
   /* ── FOOTER / MODAL ACTIONS ── */
   .modal-footer {
     display: flex;
@@ -442,25 +390,6 @@
     background: var(--surface);
   }
 
-  /* ── TOAST ── */
-  .toast {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    background: var(--text);
-    color: white;
-    padding: 12px 18px;
-    border-radius: 10px;
-    font-size: 13px;
-    font-weight: 500;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-    z-index: 999;
-    opacity: 0;
-    transform: translateY(8px);
-    transition: all .25s;
-    pointer-events: none;
-  }
-  .toast.show { opacity: 1; transform: translateY(0); }
 
   /* ── CONFIRM ── */
   .confirm-overlay {
@@ -499,6 +428,5 @@
   @media (max-width: 640px) {
     header, .stats-bar, main { padding-left: 16px; padding-right: 16px; }
     .form-grid { grid-template-columns: 1fr; }
-    .cards-grid { grid-template-columns: 1fr; }
     .form-group.full { grid-column: auto; }
   }
