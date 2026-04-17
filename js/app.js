@@ -1,49 +1,70 @@
 
+// ═══════════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════
 
-// ── DATA ──────────────────────────────────────────────────────────────
-const application = {
-    id: '',
-    company: '',
-    jobTitle: '',
-    location: '',
-    contract: '',
-    salary: '',
-    status: '',
-    dateApply: '',
-    lastUpdate: '',
-    urlOffer: '',
-    interviewNumber: 0,
-    urlCover: '', 
-    mails: [
-        {
-            date: '',
-            title: '',
-            received: false, // true if received, false if sent
-            url: ''
-        }
-    ]
-}
+// Single source of truth for all statuses (label, CSS class, color)
+const STATUS = {
+    postule:   { label: 'Postulé',        cls: 's-postule',   color: '#1a6fa8' },
+    relance:   { label: 'Relancé',        cls: 's-relance',   color: '#d68910' },
+    entretien: { label: 'Entretien',      cls: 's-entretien', color: '#2d6a4f' },
+    test:      { label: 'Test technique', cls: 's-test',      color: '#7c3aed' },
+    offre:     { label: 'Offre reçue',    cls: 's-offre',     color: '#b7950b' },
+    refus:     { label: 'Refus',          cls: 's-refus',     color: '#c0392b' },
+    archive:   { label: 'Archivé',        cls: 's-archive',   color: '#7a746a' },
+};
 
-async function openDB(){
-    let db = new Promise((resolve, reject) => {
+// Available columns for export (includes fields not shown in the main table)
+const EXPORT_COLUMNS = [
+    { key: 'company',         label: 'Entreprise' },
+    { key: 'jobTitle',        label: 'Poste' },
+    { key: 'location',        label: 'Localisation' },
+    { key: 'contract',        label: 'Contrat' },
+    { key: 'salary',          label: 'Salaire' },
+    { key: 'status',          label: 'Statut' },
+    { key: 'interviewNumber', label: 'Entretiens' },
+    { key: 'dateApply',       label: 'Date candidature' },
+    { key: 'lastUpdate',      label: 'Dernière MAJ' },
+    { key: 'urlOffer',        label: 'Lien offre' },
+    { key: 'urlCover',        label: 'Lettre motivation' },
+];
+
+// Maps data keys to their nth-child position in the HTML table (used for PDF column hiding)
+const TABLE_COLUMN_MAP = {
+    company: 1, jobTitle: 2, location: 3, contract: 4, salary: 5,
+    status: 6, interviewNumber: 7, dateApply: 8, lastUpdate: 9,
+};
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════
+
+let db = null;                // IndexedDB instance, initialized once on startup
+let editingId = null;         // ID of the application being edited, null when creating
+let mailsContainer = [];      // Mails for the currently open form
+let currentFilteredApps = []; // Snapshot of filtered apps, used by export
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// DATABASE (IndexedDB)
+// ═══════════════════════════════════════════════════════════════════════
+
+async function openDB() {
+    return new Promise((resolve, reject) => {
         const request = indexedDB.open('job-tracker-db', 1);
-        request.onerror = (event) => reject(event.target.error);
-        request.onsuccess = (event) => resolve(event.target.result);
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
+        request.onerror = (e) => reject(e.target.error);
+        request.onsuccess = (e) => resolve(e.target.result);
+        request.onupgradeneeded = (e) => {
+            const db = e.target.result;
             if (!db.objectStoreNames.contains('applications')) {
                 db.createObjectStore('applications', { keyPath: 'id' });
             }
         };
-
     });
-    return db;
 }
 
-let db = null;
-let mailsContainer = [];
-let currentFilteredApps = [];
-
+// store.put() inserts or updates depending on whether the id already exists
 async function saveApplication(application) {
     if (!db) db = await openDB();
     return new Promise((resolve, reject) => {
@@ -51,18 +72,18 @@ async function saveApplication(application) {
         const store = transaction.objectStore('applications');
         const request = store.put(application);
         request.onsuccess = () => resolve();
-        request.onerror = (event) => reject(event.target.error);
+        request.onerror = (e) => reject(e.target.error);
     });
 }
 
-async function readApplications(){
+async function readApplications() {
     if (!db) db = await openDB();
     return new Promise((resolve, reject) => {
         const transaction = db.transaction(['applications'], 'readonly');
         const store = transaction.objectStore('applications');
         const request = store.getAll();
-        request.onsuccess = (event) => resolve(event.target.result);
-        request.onerror = (event) => reject(event.target.error);
+        request.onsuccess = (e) => resolve(e.target.result);
+        request.onerror = (e) => reject(e.target.error);
     });
 }
 
@@ -73,54 +94,54 @@ async function deleteApplication(id) {
         const store = transaction.objectStore('applications');
         const request = store.delete(id);
         request.onsuccess = () => resolve();
-        request.onerror = (event) => reject(event.target.error);
+        request.onerror = (e) => reject(e.target.error);
     });
 }
 
 
-const STATUS = {
-  postule:   { label: 'Postulé',        cls: 's-postule',   color: '#1a6fa8', bar: '#1a6fa8' },
-  relance:   { label: 'Relancé',        cls: 's-relance',   color: '#d68910', bar: '#d68910' },
-  entretien: { label: 'Entretien',      cls: 's-entretien', color: '#2d6a4f', bar: '#2d6a4f' },
-  test:      { label: 'Test technique', cls: 's-test',      color: '#7c3aed', bar: '#7c3aed' },
-  offre:     { label: 'Offre reçue',    cls: 's-offre',     color: '#b7950b', bar: '#b7950b' },
-  refus:     { label: 'Refus',          cls: 's-refus',     color: '#c0392b', bar: '#c0392b' },
-  archive:   { label: 'Archivé',        cls: 's-archive',   color: '#7a746a', bar: '#c8c2ba' },
-};
+// ═══════════════════════════════════════════════════════════════════════
+// DISPLAY
+// ═══════════════════════════════════════════════════════════════════════
 
-function updateStats(applications){
-    const statsContainer = document.getElementById('statsBar');
-    const number = applications.length;
-    const decline = applications.filter(app => app.status === 'refus').length;
-    const rate = number > 0 ? Math.round((decline / number) * 100) : 0;
-    const interviewNumber = applications.reduce((sum, app) => sum + app.interviewNumber, 0);
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    return new Date(dateStr).toLocaleDateString('fr-FR', options);
+}
 
-    statsContainer.innerHTML = `
+function updateStats(applications) {
+    const total = applications.length;
+    const refus = applications.filter(app => app.status === 'refus').length;
+    const rate = total > 0 ? Math.round((refus / total) * 100) : 0;
+    const entretiens = applications.reduce((sum, app) => sum + app.interviewNumber, 0);
+
+    document.getElementById('statsBar').innerHTML = `
         <div class="stat">
-            <span class="stat-value">${number}</span>
+            <span class="stat-value">${total}</span>
             <span class="stat-label">Candidatures</span>
         </div>
-        <div class="stat"> 
-            <span class="stat-value">${decline}</span>
+        <div class="stat">
+            <span class="stat-value">${refus}</span>
             <span class="stat-label">Candidatures refusées</span>
         </div>
-        <div class="stat"> 
+        <div class="stat">
             <span class="stat-value">${rate}%</span>
             <span class="stat-label">Taux de refus</span>
         </div>
         <div class="stat">
-            <span class="stat-value">${interviewNumber}</span>
+            <span class="stat-value">${entretiens}</span>
             <span class="stat-label">Entretiens</span>
         </div>
-    `; 
+    `;
 }
 
-async function displayJobApplications(){
+// Main render function — reads DB, applies filters/sort, rebuilds the table
+async function displayJobApplications() {
     const applications = await readApplications();
 
-    if (applications.length === 0){
+    if (applications.length === 0) {
         currentFilteredApps = [];
-         document.getElementById('cardsList').innerHTML = `
+        document.getElementById('cardsList').innerHTML = `
             <div class="empty-state">
                 <p>Aucune candidature enregistrée.</p>
                 <button onclick="openAddModal()" class="btn btn-primary">Ajouter ma première candidature</button>
@@ -130,46 +151,33 @@ async function displayJobApplications(){
         return;
     }
 
-    // Read the filter values
-    // search for company, job title, location
-    let searchFilter = document.getElementById('searchInput').value.toLowerCase();
+    const searchFilter = document.getElementById('searchInput').value.toLowerCase();
+    const statusFilter = document.getElementById('filterStatus').value;
+    const orderFilter  = document.getElementById('sortBy').value;
+    const dateMin      = document.getElementById('f-date-min').value;
+    const dateMax      = document.getElementById('f-date-max').value;
 
-    let statusFilter = document.getElementById('filterStatus').value;
-
-    let orderFilter = document.getElementById('sortBy').value;
-
-    let dateMin = document.getElementById('f-date-min').value;
-    let dateMax = document.getElementById('f-date-max').value;
-
-    // Apply filters
     let filteredApps = applications.filter(app => {
-        const matchesSearch = app.company.toLowerCase().includes(searchFilter) ||
-                              app.jobTitle.toLowerCase().includes(searchFilter) ||
-                              app.location.toLowerCase().includes(searchFilter) 
-
+        const matchesSearch = app.company.toLowerCase().includes(searchFilter)
+            || app.jobTitle.toLowerCase().includes(searchFilter)
+            || app.location.toLowerCase().includes(searchFilter);
         const matchesStatus = statusFilter === '' || app.status === statusFilter;
-        const matchesDate = (dateMin === '' || new Date(app.lastUpdate) >= new Date(dateMin)) &&
-                            (dateMax === '' || new Date(app.lastUpdate) <= new Date(dateMax));
+        const matchesDate = (dateMin === '' || new Date(app.lastUpdate) >= new Date(dateMin))
+            && (dateMax === '' || new Date(app.lastUpdate) <= new Date(dateMax));
         return matchesSearch && matchesStatus && matchesDate;
     });
 
-    if (filteredApps.length === 0){
+    if (filteredApps.length === 0) {
         currentFilteredApps = [];
-        document.getElementById('cardsList').innerHTML = '<p style="text-align: center; color: var(--text);">Aucune candidature trouvée</p>';
+        document.getElementById('cardsList').innerHTML = '<p style="text-align:center;color:var(--text);">Aucune candidature trouvée</p>';
         updateStats([]);
         return;
     }
 
-    // Apply sorting
-    if(orderFilter === 'date_desc'){
-        filteredApps.sort((a, b) => new Date(b.lastUpdate) - new Date(a.lastUpdate));
-    } else if(orderFilter === 'date_asc'){
-        filteredApps.sort((a, b) => new Date(a.lastUpdate) - new Date(b.lastUpdate));
-    } else if(orderFilter === 'company'){
-        filteredApps.sort((a, b) => a.company.localeCompare(b.company));
-    } else if(orderFilter === 'status'){
-        filteredApps.sort((a, b) => a.status.localeCompare(b.status));
-    }
+    if      (orderFilter === 'date_desc') filteredApps.sort((a, b) => new Date(b.lastUpdate) - new Date(a.lastUpdate));
+    else if (orderFilter === 'date_asc')  filteredApps.sort((a, b) => new Date(a.lastUpdate) - new Date(b.lastUpdate));
+    else if (orderFilter === 'company')   filteredApps.sort((a, b) => a.company.localeCompare(b.company));
+    else if (orderFilter === 'status')    filteredApps.sort((a, b) => a.status.localeCompare(b.status));
 
     const tableHead = `
     <table>
@@ -183,14 +191,15 @@ async function displayJobApplications(){
         <th>Nombre d'entretiens</th>
         <th>Date de candidature</th>
         <th>Dernière mise à jour</th>
-    </tr>
-    `;
+    </tr>`;
 
     const tableBody = filteredApps.map(app => `
         <tr onclick="openEditModal('${app.id}')">
             <td>${app.company}</td>
             <td>
-                ${app.urlOffer ? `<a href="${app.urlOffer}" target="_blank" onclick="event.stopPropagation();">${app.jobTitle}</a>` : app.jobTitle}
+                ${app.urlOffer
+                    ? `<a href="${app.urlOffer}" target="_blank" onclick="event.stopPropagation();">${app.jobTitle}</a>`
+                    : app.jobTitle}
             </td>
             <td>${app.location}</td>
             <td>${app.contract}</td>
@@ -202,17 +211,21 @@ async function displayJobApplications(){
         </tr>
     `).join('');
 
-    const tableFooter = `</table>`;
-
     currentFilteredApps = filteredApps;
-    document.getElementById('cardsList').innerHTML = tableHead + tableBody + tableFooter;
+    document.getElementById('cardsList').innerHTML = tableHead + tableBody + `</table>`;
     updateStats(filteredApps);
 }
 
-let editingId = null;
 
+// ═══════════════════════════════════════════════════════════════════════
+// MODAL — APPLICATION FORM (add / edit)
+// ═══════════════════════════════════════════════════════════════════════
+
+// Clears all form fields, error states, and mail list
 function resetForm() {
-    ['f-company','f-job-title','f-location','f-salary','f-date-apply','f-date-update','f-url-offer','f-interviews','f-url-cover'].forEach(id => {
+    ['f-company','f-job-title','f-location','f-salary',
+     'f-date-apply','f-date-update','f-url-offer','f-interviews','f-url-cover'
+    ].forEach(id => {
         document.getElementById(id).value = '';
         document.getElementById(id).classList.remove('input-error');
     });
@@ -224,156 +237,144 @@ function resetForm() {
     renderMails();
 }
 
-function openAddModal(){
+function openAddModal() {
     editingId = null;
     resetForm();
     document.getElementById('modalOverlay').classList.add('open');
 }
 
-async function openEditModal(id){
+async function openEditModal(id) {
     editingId = id;
-    let application = await readApplications();
-    const app = application.find(a => a.id === id);
-    if(app){
-        document.getElementById('f-company').value = app.company;
-        document.getElementById('f-job-title').value = app.jobTitle;
-        document.getElementById('f-location').value = app.location;
-        document.getElementById('f-contract').value = app.contract;
-        document.getElementById('f-salary').value = app.salary;
-        document.getElementById('f-status').value = app.status;
-        document.getElementById('f-date-apply').value = app.dateApply;
-        document.getElementById('f-date-update').value = app.lastUpdate;
-        document.getElementById('f-url-offer').value = app.urlOffer;
-        document.getElementById('f-interviews').value = app.interviewNumber;
-        document.getElementById('f-url-cover').value = app.urlCover;
-        document.getElementById('modalOverlay').classList.add('open');
-        document.getElementById('deleteBtn').classList.add('open');
+    const applications = await readApplications();
+    const app = applications.find(a => a.id === id);
+    if (!app) return;
 
-        mailsContainer = app.mails || [];
-        renderMails();
-    }
+    document.getElementById('f-company').value      = app.company;
+    document.getElementById('f-job-title').value    = app.jobTitle;
+    document.getElementById('f-location').value     = app.location;
+    document.getElementById('f-contract').value     = app.contract;
+    document.getElementById('f-salary').value       = app.salary;
+    document.getElementById('f-status').value       = app.status;
+    document.getElementById('f-date-apply').value   = app.dateApply;
+    document.getElementById('f-date-update').value  = app.lastUpdate;
+    document.getElementById('f-url-offer').value    = app.urlOffer;
+    document.getElementById('f-interviews').value   = app.interviewNumber;
+    document.getElementById('f-url-cover').value    = app.urlCover;
+
+    mailsContainer = app.mails || [];
+    renderMails();
+
+    document.getElementById('modalOverlay').classList.add('open');
+    document.getElementById('deleteBtn').classList.add('open');
 }
 
-function handleOverlayClick(event){
-    if(event.target.id === 'modalOverlay'){
-        document.getElementById('modalOverlay').classList.remove('open');
-        document.getElementById('deleteBtn').classList.remove('open');
-    }
+function handleOverlayClick(event) {
+    if (event.target.id === 'modalOverlay') closeModal();
 }
 
-function closeModal(){
+function closeModal() {
     document.getElementById('modalOverlay').classList.remove('open');
     document.getElementById('deleteBtn').classList.remove('open');
-
-    // clear mails 
     mailsContainer = [];
 }
 
-function openConfirm(){
-    let confirmModal = document.getElementById('confirmOverlay');
-    confirmModal.classList.add('open');
-    
-}
-
-function closeConfirm(){
-    let confirmModal = document.getElementById('confirmOverlay');
-    confirmModal.classList.remove('open');
-}
-
-function confirmDelete(){
-    deleteEntry();
-    closeConfirm();
-}
-
-async function deleteEntry(){
-    if(editingId){
-        await deleteApplication(editingId);
-        await displayJobApplications();
-        document.getElementById('modalOverlay').classList.remove('open');
-        document.getElementById('deleteBtn').classList.remove('open');
-        editingId = null;
-    }
-}
-
-async function saveEntry(){
-    const companyEl = document.getElementById('f-company');
+async function saveEntry() {
+    const companyEl  = document.getElementById('f-company');
     const jobTitleEl = document.getElementById('f-job-title');
     let hasError = false;
 
     [companyEl, jobTitleEl].forEach(el => {
-        if (!el.value.trim()) {
-            el.classList.add('input-error');
-            hasError = true;
-        } else {
-            el.classList.remove('input-error');
-        }
+        const empty = !el.value.trim();
+        el.classList.toggle('input-error', empty);
+        if (empty) hasError = true;
     });
 
     document.getElementById('formError').style.display = hasError ? 'block' : 'none';
     if (hasError) return;
 
     const newApp = {
-        id: editingId|| crypto.randomUUID(),
-        company: document.getElementById('f-company').value,
-        jobTitle: document.getElementById('f-job-title').value,
-        location: document.getElementById('f-location').value,
-        contract: document.getElementById('f-contract').value,
-        salary: document.getElementById('f-salary').value,
-        status: document.getElementById('f-status').value,
-        dateApply: document.getElementById('f-date-apply').value,
-        lastUpdate: document.getElementById('f-date-update').value,
-        urlOffer: document.getElementById('f-url-offer').value,
-        mails: mailsContainer,
+        id:              editingId || crypto.randomUUID(), // crypto.randomUUID() is native, no lib needed
+        company:         companyEl.value,
+        jobTitle:        jobTitleEl.value,
+        location:        document.getElementById('f-location').value,
+        contract:        document.getElementById('f-contract').value,
+        salary:          document.getElementById('f-salary').value,
+        status:          document.getElementById('f-status').value,
+        dateApply:       document.getElementById('f-date-apply').value,
+        lastUpdate:      document.getElementById('f-date-update').value,
+        urlOffer:        document.getElementById('f-url-offer').value,
+        urlCover:        document.getElementById('f-url-cover').value,
         interviewNumber: parseInt(document.getElementById('f-interviews').value) || 0,
-        urlCover: document.getElementById('f-url-cover').value
+        mails:           mailsContainer,
     };
 
-    // Save to IndexedDB
     await saveApplication(newApp);
-    // Re-render cards
     await displayJobApplications();
-
     resetForm();
     closeModal();
 }
 
 
-function addMail(){
-    const mail = {
-        date: document.getElementById('f-mail-date').value,
-        title: document.getElementById('f-mail-title').value,
+// ═══════════════════════════════════════════════════════════════════════
+// MODAL — DELETE CONFIRMATION
+// ═══════════════════════════════════════════════════════════════════════
+
+function openConfirm()  { document.getElementById('confirmOverlay').classList.add('open'); }
+function closeConfirm() { document.getElementById('confirmOverlay').classList.remove('open'); }
+
+function confirmDelete() {
+    deleteEntry();
+    closeConfirm();
+}
+
+async function deleteEntry() {
+    if (!editingId) return;
+    await deleteApplication(editingId);
+    await displayJobApplications();
+    document.getElementById('modalOverlay').classList.remove('open');
+    document.getElementById('deleteBtn').classList.remove('open');
+    editingId = null;
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// MAILS
+// ═══════════════════════════════════════════════════════════════════════
+
+function openMailForm() {
+    document.getElementById('mailForm').style.display = 'block';
+}
+
+function addMail() {
+    mailsContainer.push({
+        date:     document.getElementById('f-mail-date').value,
+        title:    document.getElementById('f-mail-title').value,
         received: document.getElementById('f-mail-received').checked,
-        url: document.getElementById('f-mail-url').value
-    };
-    mailsContainer.push(mail);
-    // Clear form
+        url:      document.getElementById('f-mail-url').value,
+    });
     document.getElementById('f-mail-date').value = '';
     document.getElementById('f-mail-title').value = '';
     document.getElementById('f-mail-received').checked = false;
     document.getElementById('f-mail-url').value = '';
-
-    // Disable mail form
     document.getElementById('mailForm').style.display = 'none';
     renderMails();
-} 
+}
 
-function renderMails(){
-    const mailsList = document.getElementById('mailsList');
-    const orderMails = [...mailsContainer].sort((a, b) => new Date(a.date) - new Date(b.date));
-    mailsList.innerHTML = orderMails.map((mail, index) => `
+function renderMails() {
+    // Spread before sort to avoid mutating mailsContainer (would break splice index in delete buttons)
+    const sorted = [...mailsContainer].sort((a, b) => new Date(a.date) - new Date(b.date));
+    document.getElementById('mailsList').innerHTML = sorted.map((mail, index) => `
         <div class="mail-entry ${mail.received ? 'received' : 'sent'}">
-            <span>${formatDate(mail.date)} : <a href="${mail.url}" target="_blank">${mail.title}</a> </span>
-            <button onclick="mailsContainer.splice(${index}, 1); renderMails();" style="background: none; border: none; color: red; cursor: pointer;">X</button>
+            <span>${formatDate(mail.date)} : <a href="${mail.url}" target="_blank">${mail.title}</a></span>
+            <button onclick="mailsContainer.splice(${index}, 1); renderMails();" style="background:none;border:none;color:red;cursor:pointer;">X</button>
         </div>
     `).join('');
 }
 
-function openMailForm(){
-    console.log('Opening mail form');
-    document.getElementById('mailForm').style.display = 'block';
-}
 
-// ── IMPORT ────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════
+// IMPORT
+// ═══════════════════════════════════════════════════════════════════════
 
 function openImportModal() {
     document.getElementById('importFile').value = '';
@@ -390,6 +391,7 @@ function handleImportOverlayClick(event) {
     if (event.target.id === 'importOverlay') closeImportModal();
 }
 
+// FileReader populates the textarea so the user can review content before importing
 function handleImportFile(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -417,10 +419,11 @@ async function runImport() {
         return;
     }
 
+    // store.put() naturally merges: existing ids are updated, new ones are inserted
     await Promise.all(data.map(app => saveApplication({
         ...app,
-        id: app.id || crypto.randomUUID(),
-        mails: app.mails || [],
+        id:              app.id || crypto.randomUUID(),
+        mails:           app.mails || [],
         interviewNumber: app.interviewNumber || 0,
     })));
 
@@ -428,23 +431,13 @@ async function runImport() {
     closeImportModal();
 }
 
-// ── EXPORT ────────────────────────────────────────────────────────────
 
-const EXPORT_COLUMNS = [
-    { key: 'company',         label: 'Entreprise' },
-    { key: 'jobTitle',        label: 'Poste' },
-    { key: 'location',        label: 'Localisation' },
-    { key: 'contract',        label: 'Contrat' },
-    { key: 'salary',          label: 'Salaire' },
-    { key: 'status',          label: 'Statut' },
-    { key: 'interviewNumber', label: 'Entretiens' },
-    { key: 'dateApply',       label: 'Date candidature' },
-    { key: 'lastUpdate',      label: 'Dernière MAJ' },
-    { key: 'urlOffer',        label: 'Lien offre' },
-    { key: 'urlCover',        label: 'Lettre motivation' },
-];
+// ═══════════════════════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════════════════════
 
 function openExportModal() {
+    // Checkboxes are generated from EXPORT_COLUMNS to stay in sync if columns change
     document.getElementById('exportColumnsGrid').innerHTML = EXPORT_COLUMNS.map(col => `
         <label class="export-col-option">
             <input type="checkbox" value="${col.key}" checked> ${col.label}
@@ -462,20 +455,22 @@ function handleExportOverlayClick(event) {
 }
 
 async function runExport() {
-    const format = document.querySelector('input[name="exportFormat"]:checked').value;
-    const useFilters = document.getElementById('exportUseFilters').checked;
+    const format      = document.querySelector('input[name="exportFormat"]:checked').value;
+    const useFilters  = document.getElementById('exportUseFilters').checked;
     const selectedKeys = [...document.querySelectorAll('#exportColumnsGrid input:checked')].map(cb => cb.value);
-    const columns = EXPORT_COLUMNS.filter(c => selectedKeys.includes(c.key));
+    const columns     = EXPORT_COLUMNS.filter(c => selectedKeys.includes(c.key));
 
+    // Use the already-computed filtered snapshot, or re-read the full DB
     const apps = useFilters ? currentFilteredApps : await readApplications();
 
-    if (format === 'csv') exportToCSV(apps, columns);
+    if      (format === 'csv')  exportToCSV(apps, columns);
     else if (format === 'json') exportToJSON(apps, columns);
-    else if (format === 'pdf') { exportToPDF(columns); return; }
+    else if (format === 'pdf')  { exportToPDF(columns); return; }
 
     closeExportModal();
 }
 
+// RFC 4180: fields containing commas, quotes or newlines must be double-quoted
 function escapeCSV(value) {
     const str = String(value ?? '');
     if (str.includes(',') || str.includes('"') || str.includes('\n')) {
@@ -484,6 +479,7 @@ function escapeCSV(value) {
     return str;
 }
 
+// Translates status keys to labels and formats dates for readable CSV/JSON output
 function getDisplayValue(app, col) {
     let val = app[col.key] ?? '';
     if (col.key === 'status') val = STATUS[val]?.label || val;
@@ -493,7 +489,7 @@ function getDisplayValue(app, col) {
 
 function exportToCSV(apps, columns) {
     const header = columns.map(c => escapeCSV(c.label)).join(',');
-    const rows = apps.map(app => columns.map(c => escapeCSV(getDisplayValue(app, c))).join(','));
+    const rows   = apps.map(app => columns.map(c => escapeCSV(getDisplayValue(app, c))).join(','));
     const filename = `candidatures_${new Date().toLocaleDateString('fr-FR').replace(/\//g, '-')}.csv`;
     downloadFile([header, ...rows].join('\n'), filename, 'text/csv;charset=utf-8;');
 }
@@ -504,17 +500,13 @@ function exportToJSON(apps, columns) {
     downloadFile(JSON.stringify(data, null, 2), filename, 'application/json');
 }
 
-const TABLE_COLUMN_MAP = {
-    company: 1, jobTitle: 2, location: 3, contract: 4, salary: 5,
-    status: 6, interviewNumber: 7, dateApply: 8, lastUpdate: 9,
-};
-
 function exportToPDF(columns) {
     const selectedKeys = new Set(columns.map(c => c.key));
     const hiddenIndices = Object.entries(TABLE_COLUMN_MAP)
         .filter(([key]) => !selectedKeys.has(key))
         .map(([, idx]) => idx);
 
+    // Inject a temporary print-only <style> to hide unselected columns without touching the DOM
     let styleEl = null;
     if (hiddenIndices.length > 0) {
         const rules = hiddenIndices.map(i =>
@@ -528,11 +520,14 @@ function exportToPDF(columns) {
 
     window.print();
 
+    // { once: true } auto-removes the listener after first fire
     window.addEventListener('afterprint', () => {
         if (styleEl) document.head.removeChild(styleEl);
     }, { once: true });
 }
 
+// Creates a hidden <a> and simulates a click — the only way to trigger a
+// client-side file download without a server
 function downloadFile(content, filename, mimeType) {
     const link = document.createElement('a');
     link.style.display = 'none';
@@ -543,22 +538,16 @@ function downloadFile(content, filename, mimeType) {
     document.body.removeChild(link);
 }
 
-function formatDate(dateStr){
-    // Format date as "DD MMM YYYY"
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateStr).toLocaleDateString('fr-FR', options);
-}
 
+// ═══════════════════════════════════════════════════════════════════════
+// INIT & GLOBAL EVENTS
+// ═══════════════════════════════════════════════════════════════════════
 
-
-
-
-async function init(){
-    console.log('app.js loaded');
+async function init() {
+    // Service worker enables offline support by caching static assets
     if ('serviceWorker' in navigator) {
         try {
             await navigator.serviceWorker.register('./service-worker.js');
-            console.log('Service Worker registered successfully');
         } catch (error) {
             console.error('Service Worker registration failed:', error);
         }
@@ -569,17 +558,11 @@ async function init(){
 
 init();
 
+// Closes the topmost open modal on Escape (priority: confirm > form > export > import)
 document.addEventListener('keydown', (evt) => {
-    if (evt.key === "Escape") {
-        if (document.getElementById('confirmOverlay').classList.contains('open')) {
-            closeConfirm();
-        } else if (document.getElementById('modalOverlay').classList.contains('open')) {
-            closeModal();
-        } else if (document.getElementById('exportOverlay').classList.contains('open')) {
-            closeExportModal();
-        } else if (document.getElementById('importOverlay').classList.contains('open')) {
-            closeImportModal();
-        }
-    }
+    if (evt.key !== 'Escape') return;
+    if      (document.getElementById('confirmOverlay').classList.contains('open')) closeConfirm();
+    else if (document.getElementById('modalOverlay').classList.contains('open'))   closeModal();
+    else if (document.getElementById('exportOverlay').classList.contains('open'))  closeExportModal();
+    else if (document.getElementById('importOverlay').classList.contains('open'))  closeImportModal();
 });
-
