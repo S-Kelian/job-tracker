@@ -337,6 +337,7 @@
     box-shadow: 0 0 0 3px rgba(45,106,79,0.1);
   }
   textarea { resize: vertical; min-height: 80px; }
+  .input-error { border-color: var(--danger) !important; box-shadow: 0 0 0 3px rgba(192,57,43,0.1) !important; }
 
 
   

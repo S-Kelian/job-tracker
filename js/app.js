@@ -211,10 +211,23 @@ async function displayJobApplications(){
 
 let editingId = null;
 
+function resetForm() {
+    ['f-company','f-job-title','f-location','f-salary','f-date-apply','f-date-update','f-url-offer','f-interviews','f-url-cover'].forEach(id => {
+        document.getElementById(id).value = '';
+        document.getElementById(id).classList.remove('input-error');
+    });
+    document.getElementById('f-contract').value = '';
+    document.getElementById('f-status').value = 'postule';
+    document.getElementById('mailForm').style.display = 'none';
+    document.getElementById('formError').style.display = 'none';
+    mailsContainer = [];
+    renderMails();
+}
+
 function openAddModal(){
     editingId = null;
-    let modal = document.getElementById('modalOverlay');
-    modal.classList.add('open'); 
+    resetForm();
+    document.getElementById('modalOverlay').classList.add('open');
 }
 
 async function openEditModal(id){
@@ -283,7 +296,22 @@ async function deleteEntry(){
 }
 
 async function saveEntry(){
-    // Read form data and create application object
+    const companyEl = document.getElementById('f-company');
+    const jobTitleEl = document.getElementById('f-job-title');
+    let hasError = false;
+
+    [companyEl, jobTitleEl].forEach(el => {
+        if (!el.value.trim()) {
+            el.classList.add('input-error');
+            hasError = true;
+        } else {
+            el.classList.remove('input-error');
+        }
+    });
+
+    document.getElementById('formError').style.display = hasError ? 'block' : 'none';
+    if (hasError) return;
+
     const newApp = {
         id: editingId|| crypto.randomUUID(),
         company: document.getElementById('f-company').value,
@@ -305,20 +333,7 @@ async function saveEntry(){
     // Re-render cards
     await displayJobApplications();
 
-    // Clear form
-    document.getElementById('f-company').value = '';
-    document.getElementById('f-job-title').value = '';
-    document.getElementById('f-location').value = '';
-    document.getElementById('f-contract').value = '';
-    document.getElementById('f-salary').value = '';
-    document.getElementById('f-status').value = '';
-    document.getElementById('f-date-apply').value = '';
-    document.getElementById('f-date-update').value = '';
-    document.getElementById('f-url-offer').value = '';
-    document.getElementById('f-interviews').value = '';
-    document.getElementById('f-url-cover').value = '';
-
-    // Close modal
+    resetForm();
     closeModal();
 }
 
