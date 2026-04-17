@@ -42,6 +42,7 @@ async function openDB(){
 
 let db = null;
 let mailsContainer = [];
+let currentFilteredApps = [];
 
 async function saveApplication(application) {
     if (!db) db = await openDB();
@@ -118,6 +119,7 @@ async function displayJobApplications(){
     const applications = await readApplications();
 
     if (applications.length === 0){
+        currentFilteredApps = [];
          document.getElementById('cardsList').innerHTML = `
             <div class="empty-state">
                 <p>Aucune candidature enregistrée.</p>
@@ -152,6 +154,7 @@ async function displayJobApplications(){
     });
 
     if (filteredApps.length === 0){
+        currentFilteredApps = [];
         document.getElementById('cardsList').innerHTML = '<p style="text-align: center; color: var(--text);">Aucune candidature trouvée</p>';
         updateStats([]);
         return;
@@ -201,6 +204,7 @@ async function displayJobApplications(){
 
     const tableFooter = `</table>`;
 
+    currentFilteredApps = filteredApps;
     document.getElementById('cardsList').innerHTML = tableHead + tableBody + tableFooter;
     updateStats(filteredApps);
 }
@@ -340,7 +344,7 @@ function addMail(){
 
 function renderMails(){
     const mailsList = document.getElementById('mailsList');
-    orderMails = mailsContainer.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const orderMails = [...mailsContainer].sort((a, b) => new Date(a.date) - new Date(b.date));
     mailsList.innerHTML = orderMails.map((mail, index) => `
         <div class="mail-entry ${mail.received ? 'received' : 'sent'}">
             <span>${formatDate(mail.date)} : <a href="${mail.url}" target="_blank">${mail.title}</a> </span>
@@ -354,28 +358,170 @@ function openMailForm(){
     document.getElementById('mailForm').style.display = 'block';
 }
 
-function exportCSV(){
-    var rows = document.querySelectorAll("table tr");
-    // Construct csv
-    var csv = [];
-    var headers = "Entreprise,Poste,Localisation,Statut,Nombre d'entretiens,Date de candidature";
-    var columnsToKeep = [0, 1, 2, 5, 6, 7];
-    csv.push(headers);
-    for (var i = 1; i < rows.length; i++) {
-        var row = [];
-        var cols = rows[i].querySelectorAll('td, th');
-        for (var j = 0; j < columnsToKeep.length; j++) {
-            row.push(cols[columnsToKeep[j]].innerText);
-        }
-        csv.push(row.join(','));
+// ── IMPORT ────────────────────────────────────────────────────────────
+
+function openImportModal() {
+    document.getElementById('importFile').value = '';
+    document.getElementById('importText').value = '';
+    document.getElementById('importError').style.display = 'none';
+    document.getElementById('importOverlay').classList.add('open');
+}
+
+function closeImportModal() {
+    document.getElementById('importOverlay').classList.remove('open');
+}
+
+function handleImportOverlayClick(event) {
+    if (event.target.id === 'importOverlay') closeImportModal();
+}
+
+function handleImportFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => { document.getElementById('importText').value = e.target.result; };
+    reader.readAsText(file);
+}
+
+async function runImport() {
+    const errorEl = document.getElementById('importError');
+    errorEl.style.display = 'none';
+
+    let data;
+    try {
+        data = JSON.parse(document.getElementById('importText').value);
+    } catch {
+        errorEl.textContent = 'JSON invalide. Vérifie le format de ton fichier.';
+        errorEl.style.display = 'block';
+        return;
     }
-    var csv_string = csv.join('\n');
-    // Download it
-    var filename = 'job_applications_' + new Date().toLocaleDateString() + '.csv';
-    var link = document.createElement('a');
+
+    if (!Array.isArray(data) || data.length === 0) {
+        errorEl.textContent = 'Le fichier doit contenir un tableau de candidatures non vide.';
+        errorEl.style.display = 'block';
+        return;
+    }
+
+    await Promise.all(data.map(app => saveApplication({
+        ...app,
+        id: app.id || crypto.randomUUID(),
+        mails: app.mails || [],
+        interviewNumber: app.interviewNumber || 0,
+    })));
+
+    await displayJobApplications();
+    closeImportModal();
+}
+
+// ── EXPORT ────────────────────────────────────────────────────────────
+
+const EXPORT_COLUMNS = [
+    { key: 'company',         label: 'Entreprise' },
+    { key: 'jobTitle',        label: 'Poste' },
+    { key: 'location',        label: 'Localisation' },
+    { key: 'contract',        label: 'Contrat' },
+    { key: 'salary',          label: 'Salaire' },
+    { key: 'status',          label: 'Statut' },
+    { key: 'interviewNumber', label: 'Entretiens' },
+    { key: 'dateApply',       label: 'Date candidature' },
+    { key: 'lastUpdate',      label: 'Dernière MAJ' },
+    { key: 'urlOffer',        label: 'Lien offre' },
+    { key: 'urlCover',        label: 'Lettre motivation' },
+];
+
+function openExportModal() {
+    document.getElementById('exportColumnsGrid').innerHTML = EXPORT_COLUMNS.map(col => `
+        <label class="export-col-option">
+            <input type="checkbox" value="${col.key}" checked> ${col.label}
+        </label>
+    `).join('');
+    document.getElementById('exportOverlay').classList.add('open');
+}
+
+function closeExportModal() {
+    document.getElementById('exportOverlay').classList.remove('open');
+}
+
+function handleExportOverlayClick(event) {
+    if (event.target.id === 'exportOverlay') closeExportModal();
+}
+
+async function runExport() {
+    const format = document.querySelector('input[name="exportFormat"]:checked').value;
+    const useFilters = document.getElementById('exportUseFilters').checked;
+    const selectedKeys = [...document.querySelectorAll('#exportColumnsGrid input:checked')].map(cb => cb.value);
+    const columns = EXPORT_COLUMNS.filter(c => selectedKeys.includes(c.key));
+
+    const apps = useFilters ? currentFilteredApps : await readApplications();
+
+    if (format === 'csv') exportToCSV(apps, columns);
+    else if (format === 'json') exportToJSON(apps, columns);
+    else if (format === 'pdf') { exportToPDF(columns); return; }
+
+    closeExportModal();
+}
+
+function escapeCSV(value) {
+    const str = String(value ?? '');
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+}
+
+function getDisplayValue(app, col) {
+    let val = app[col.key] ?? '';
+    if (col.key === 'status') val = STATUS[val]?.label || val;
+    if (col.key === 'dateApply' || col.key === 'lastUpdate') val = val ? formatDate(val) : '';
+    return val;
+}
+
+function exportToCSV(apps, columns) {
+    const header = columns.map(c => escapeCSV(c.label)).join(',');
+    const rows = apps.map(app => columns.map(c => escapeCSV(getDisplayValue(app, c))).join(','));
+    const filename = `candidatures_${new Date().toLocaleDateString('fr-FR').replace(/\//g, '-')}.csv`;
+    downloadFile([header, ...rows].join('\n'), filename, 'text/csv;charset=utf-8;');
+}
+
+function exportToJSON(apps, columns) {
+    const data = apps.map(app => Object.fromEntries(columns.map(c => [c.key, app[c.key] ?? ''])));
+    const filename = `candidatures_${new Date().toLocaleDateString('fr-FR').replace(/\//g, '-')}.json`;
+    downloadFile(JSON.stringify(data, null, 2), filename, 'application/json');
+}
+
+const TABLE_COLUMN_MAP = {
+    company: 1, jobTitle: 2, location: 3, contract: 4, salary: 5,
+    status: 6, interviewNumber: 7, dateApply: 8, lastUpdate: 9,
+};
+
+function exportToPDF(columns) {
+    const selectedKeys = new Set(columns.map(c => c.key));
+    const hiddenIndices = Object.entries(TABLE_COLUMN_MAP)
+        .filter(([key]) => !selectedKeys.has(key))
+        .map(([, idx]) => idx);
+
+    let styleEl = null;
+    if (hiddenIndices.length > 0) {
+        const rules = hiddenIndices.map(i =>
+            `table th:nth-child(${i}), table td:nth-child(${i}) { display: none; }`
+        ).join(' ');
+        styleEl = document.createElement('style');
+        styleEl.setAttribute('media', 'print');
+        styleEl.textContent = rules;
+        document.head.appendChild(styleEl);
+    }
+
+    window.print();
+
+    window.addEventListener('afterprint', () => {
+        if (styleEl) document.head.removeChild(styleEl);
+    }, { once: true });
+}
+
+function downloadFile(content, filename, mimeType) {
+    const link = document.createElement('a');
     link.style.display = 'none';
-    link.setAttribute('target', '_blank');
-    link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv_string));
+    link.setAttribute('href', `data:${mimeType},` + encodeURIComponent(content));
     link.setAttribute('download', filename);
     document.body.appendChild(link);
     link.click();
@@ -408,13 +554,17 @@ async function init(){
 
 init();
 
-document.onkeydown = function(evt) {
+document.addEventListener('keydown', (evt) => {
     if (evt.key === "Escape") {
         if (document.getElementById('confirmOverlay').classList.contains('open')) {
             closeConfirm();
         } else if (document.getElementById('modalOverlay').classList.contains('open')) {
             closeModal();
+        } else if (document.getElementById('exportOverlay').classList.contains('open')) {
+            closeExportModal();
+        } else if (document.getElementById('importOverlay').classList.contains('open')) {
+            closeImportModal();
         }
     }
-};
+});
 

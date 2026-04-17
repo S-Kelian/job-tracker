@@ -425,6 +425,56 @@
     font-style: italic;
   }
 
+  /* ── EXPORT MODAL ── */
+  .export-format-group {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .export-opt-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text);
+    text-transform: none;
+    letter-spacing: 0;
+    cursor: pointer;
+  }
+  .export-columns-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .export-col-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text);
+    text-transform: none;
+    letter-spacing: 0;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .export-col-option:hover { background: var(--surface2); }
+
+  @media print {
+    header, .stats-bar, .toolbar, .modal-overlay, .confirm-overlay { display: none !important; }
+    main { max-width: 100%; padding: 0; }
+    body { background: #fff; }
+    table { font-size: 11px; }
+    tr { page-break-inside: avoid; }
+    @page { margin: 1.5cm; }
+  }
+
   @media (max-width: 640px) {
     header, .stats-bar, main { padding-left: 16px; padding-right: 16px; }
     .form-grid { grid-template-columns: 1fr; }

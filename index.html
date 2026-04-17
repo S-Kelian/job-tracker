@@ -16,7 +16,11 @@
         <header>
             <div class="logo">job<span>.</span>tracker</div>
             <div class="header-actions">
-                <button class="btn btn-ghost" onclick="exportCSV()">
+                <button class="btn btn-ghost" onclick="openImportModal()">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                Importer
+                </button>
+                <button class="btn btn-ghost" onclick="openExportModal()">
                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                 Exporter
                 </button>
@@ -189,6 +193,75 @@
             <div class="confirm-actions">
             <button class="btn btn-ghost" onclick="closeConfirm()">Annuler</button>
             <button class="btn btn-delete open" onclick="confirmDelete()">Supprimer</button>
+            </div>
+        </div>
+        </div>
+
+        <!-- IMPORT MODAL -->
+        <div class="modal-overlay" id="importOverlay" onclick="handleImportOverlayClick(event)">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Importer des candidatures</div>
+                <button class="btn-icon" onclick="closeImportModal()">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>Fichier JSON</label>
+                    <input type="file" id="importFile" accept=".json" onchange="handleImportFile(event)">
+                </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>Ou coller le JSON</label>
+                    <textarea id="importText" rows="8" placeholder='[{"company": "...", ...}]'></textarea>
+                </div>
+                <p id="importError" style="color: var(--danger); font-size: 13px; margin-top: 12px; display: none;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeImportModal()">Annuler</button>
+                <button class="btn btn-primary" onclick="runImport()">Importer</button>
+            </div>
+        </div>
+        </div>
+
+        <!-- EXPORT MODAL -->
+        <div class="modal-overlay" id="exportOverlay" onclick="handleExportOverlayClick(event)">
+        <div class="modal" id="exportModal">
+            <div class="modal-header">
+                <div class="modal-title">Exporter les candidatures</div>
+                <button class="btn-icon" onclick="closeExportModal()">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>Format</label>
+                    <div class="export-format-group">
+                        <label class="export-opt-label">
+                            <input type="radio" name="exportFormat" value="csv" checked> CSV
+                        </label>
+                        <label class="export-opt-label">
+                            <input type="radio" name="exportFormat" value="json"> JSON
+                        </label>
+                        <label class="export-opt-label">
+                            <input type="radio" name="exportFormat" value="pdf"> PDF
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>Données</label>
+                    <label class="export-opt-label">
+                        <input type="checkbox" id="exportUseFilters"> Respecter les filtres actifs
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>Colonnes</label>
+                    <div class="export-columns-grid" id="exportColumnsGrid"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeExportModal()">Annuler</button>
+                <button class="btn btn-primary" onclick="runExport()">Exporter</button>
             </div>
         </div>
         </div>
